@@ -73,7 +73,12 @@
             min-height: 50px;
         }
         .law-info { font-weight: bold; margin-bottom: 10px; color: var(--primary-color); border-bottom: 1px solid #eee; }
+        
+        /* 条・項・号の表示スタイル */
         .article-line { margin-bottom: 8px; display: block; }
+        .paragraph-num { font-weight: bold; margin-right: 0.5em; }
+        .item-row { margin-left: 1.5em; display: block; } /* 号はインデントする */
+        
         .error { color: #d63031; background: #fff5f5; padding: 15px; border-radius: 5px; }
     </style>
 </head>
@@ -99,7 +104,6 @@
 </div>
 
 <script>
-    // 指定された15法令のLawIDマッピング
     const LAW_LIST = [
         { name: "日本国憲法", id: "321AC0000000067" },
         { name: "民法", id: "129AC0000000089" },
@@ -118,7 +122,6 @@
         { name: "国家賠償法", id: "322AC0000000125" }
     ];
 
-    // 初期化：セレクトボックスの生成
     const select = document.getElementById('lawSelect');
     LAW_LIST.forEach(law => {
         const opt = document.createElement('option');
@@ -127,6 +130,11 @@
         select.appendChild(opt);
     });
 
+    // 半角数字を全角数字に変換する関数（項番号「２」などの表示用）
+    function toZenkaku(str) {
+        return str.replace(/[0-9]/g, s => String.fromCharCode(s.charCodeAt(0) + 0xFEE0));
+    }
+
     async function fetchArticle() {
         const lawId = document.getElementById('lawSelect').value;
         const lawName = document.getElementById('lawSelect').selectedOptions[0].text;
@@ -134,7 +142,6 @@
         const statusDiv = document.getElementById('status');
         const resultDiv = document.getElementById('result');
 
-        // 数字の全角→半角変換と「条」などの除去
         articleNum = articleNum.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
                                .replace(/[^0-9]/g, '');
 
@@ -157,20 +164,43 @@
             const parser = new DOMParser();
             const xml = parser.parseFromString(xmlText, "text/xml");
 
-            // 条文テキストの抽出
-            const sentences = xml.querySelectorAll('Sentence');
-            
-            if (sentences.length === 0) {
+            // 条(Article)ノードを取得
+            const articleNode = xml.querySelector('Article');
+            if (!articleNode) {
                 throw new Error(`「${lawName}」に第 ${articleNum} 条は見つかりませんでした。`);
             }
 
-            // 結果の組み立て
+            const articleTitle = articleNode.querySelector('ArticleTitle').textContent;
             let html = `<div class="law-info">${lawName} 第${articleNum}条</div>`;
-            sentences.forEach(s => {
-                const text = s.textContent.trim();
-                if (text) {
-                    html += `<span class="article-line">${text}</span>`;
+
+            // 項(Paragraph)を順番に処理
+            const paragraphs = articleNode.querySelectorAll('Paragraph');
+            paragraphs.forEach((para, index) => {
+                // 項番号の取得
+                const pNumNode = para.querySelector('ParagraphNum');
+                let pNumText = pNumNode ? pNumNode.textContent : "";
+                
+                // 本文(ParagraphSentence)の取得
+                const pSentences = para.querySelectorAll('ParagraphSentence > Sentence');
+                let pText = Array.from(pSentences).map(s => s.textContent).join('');
+
+                if (index === 0) {
+                    // 第1項：条番号(第一条) + 本文
+                    html += `<div class="article-line"><span class="paragraph-num">${articleTitle}</span>${pText}</div>`;
+                } else {
+                    // 第2項以降：項番号(２など) + 本文
+                    const displayNum = toZenkaku(pNumText);
+                    html += `<div class="article-line"><span class="paragraph-num">${displayNum}</span>${pText}</div>`;
                 }
+
+                // 号(Item)がある場合は処理
+                const items = para.querySelectorAll('Item');
+                items.forEach(item => {
+                    const iTitle = item.querySelector('ItemTitle').textContent;
+                    const iSentences = item.querySelectorAll('ItemSentence > Sentence');
+                    const iText = Array.from(iSentences).map(s => s.textContent).join('');
+                    html += `<div class="item-row">${iTitle}　${iText}</div>`;
+                });
             });
 
             resultDiv.innerHTML = html;
