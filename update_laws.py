@@ -1,61 +1,73 @@
+import os
+import json
 import requests
 import xml.etree.ElementTree as ET
-import json
-import os
 
-# 取得対象の法令リスト (法令ID)
+# 対象とする法令リスト (法令ID: 法令名)
 LAW_LIST = {
-    "minpo": "明治二十九年法律第八十九号",  # 民法
-    "kenpo": "昭和二十一年憲法",            # 憲法
-    "keihou": "明治四十年法律第四十五号"     # 刑法
+    "321AC0000000003": "constitution",  # 日本国憲法
+    "129AC0000000089": "civil_code",    # 民法
 }
 
-BASE_URL = "https://elaws.e-gov.go.jp/api/1/lawdata/"
+DATA_DIR = "data"
+CHUNK_SIZE = 100  # 100条ごとにJSONを分割
 
-def parse_law_xml(law_id):
-    response = requests.get(f"{BASE_URL}{law_id}")
-    if response.status_code != 200:
-        return None
-    
-    root = ET.fromstring(response.content)
-    law_title = root.find(".//LawTitle").text
-    
-    # データ構造: { "t": タイトル, "a": { "条数": { "c": 見出し, "s": [本文] } } }
-    law_data = {
-        "t": law_title,
-        "a": {}
-    }
+def fetch_law_xml(law_id):
+    url = f"https://elaws.e-gov.go.jp/api/1/lawdata/{law_id}"
+    response = requests.get(url)
+    return response.content
 
+def parse_law_xml(xml_content):
+    root = ET.fromstring(xml_content)
+    articles = {}
+    
+    # 条文(Article)を全抽出
     for article in root.findall(".//Article"):
-        num_node = article.find("ArticleTitle")
-        if num_node is None: continue
+        num_tag = article.find("ArticleTitle")
+        if num_tag is None or not num_tag.text:
+            continue
         
-        num = num_node.text.replace("第", "").replace("条", "")
-        caption = article.find("ArticleCaption")
-        caption_text = caption.text if caption is not None else ""
+        # 条文番号の正規化 (例: 第十条の二 -> 10_2) 
+        # ※簡易化のためタイトルをそのままキーにするか、正規化ロジックを挟む
+        title = num_tag.text.replace("第", "").replace("条", "")
         
-        sentences = []
-        for sentence in article.findall(".//Sentence"):
-            if sentence.text:
-                sentences.append(sentence.text)
+        # 本文の抽出 (ParagraphSentence)
+        sentences = [s.text for s in article.findall(".//ParagraphSentence/Sentence") if s.text]
         
-        law_data["a"][num] = {
-            "c": caption_text,
+        # 軽量化データ構造 (t: title, s: sentences)
+        articles[title] = {
+            "t": num_tag.text,
             "s": sentences
         }
-    
-    return law_data
+    return articles
 
-def save_optimized_json(name, data):
-    os.makedirs("data", exist_ok=True)
-    # 大きな法令（民法など）はここで分割ロジックを入れることも可能
-    # 今回は1つの最適化されたJSONとして保存
-    with open(f"data/{name}.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
+def save_optimized_json(law_name, data):
+    law_path = os.path.join(DATA_DIR, law_name)
+    os.makedirs(law_path, exist_ok=True)
+    
+    # 巨大な法令を分割して保存
+    items = list(data.items())
+    index_map = {}
+    
+    for i in range(0, len(items), CHUNK_SIZE):
+        chunk = dict(items[i:i + CHUNK_SIZE])
+        chunk_name = f"chunk_{i // CHUNK_SIZE}.json"
+        
+        with open(os.path.join(law_path, chunk_name), 'w', encoding='utf-8') as f:
+            json.dump(chunk, f, ensure_ascii=False, separators=(',', ':'))
+            
+        # インデックス作成 (どの条文がどのファイルにあるか)
+        for key in chunk.keys():
+            index_map[key] = chunk_name
+            
+    # インデックスファイルの保存
+    with open(os.path.join(law_path, "index.json"), 'w', encoding='utf-8') as f:
+        json.dump(index_map, f, ensure_ascii=False, separators=(',', ':'))
 
 if __name__ == "__main__":
-    for name, law_id in LAW_LIST.items():
-        print(f"Processing {name}...")
-        data = parse_law_xml(law_id)
-        if data:
-            save_optimized_json(name, data)
+    for law_id, law_name in LAW_LIST.items():
+        print(f"Processing {law_name}...")
+        xml = fetch_law_xml(law_id)
+        data = parse_law_xml(xml)
+        save_optimized_json(law_name, data)
+    print("Done!")
