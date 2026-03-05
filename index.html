@@ -3,214 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>主要法令条文検索ツール</title>
+    <title>条文検索アプリ</title>
     <style>
         :root {
             --primary-color: #2c3e50;
-            --accent-color: #3498db;
             --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
         }
+
         body {
             font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
             background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.6;
             margin: 0;
             padding: 20px;
-            color: #333;
         }
+
         .container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 0 auto;
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+
         h1 {
             text-align: center;
-            font-size: 1.3rem;
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
         }
-        .search-area {
+
+        /* 入力エリア */
+        .search-box {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin: 20px 0;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            align-items: center;
         }
+
         .input-group {
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 5px;
+            flex: 1;
         }
-        label { font-size: 0.85rem; font-weight: bold; color: #555; }
-        select, input {
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
             font-size: 1rem;
         }
+
         button {
-            padding: 15px;
-            background-color: var(--accent-color);
+            padding: 10px 20px;
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: bold;
+            border-radius: 4px;
             cursor: pointer;
-            transition: 0.2s;
+            font-weight: bold;
+            transition: opacity 0.2s;
         }
-        button:hover { background-color: #2980b9; }
-        #status { text-align: center; font-size: 0.9rem; color: #666; min-height: 1.2em; }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        /* 結果表示エリア */
         #result {
-            margin-top: 20px;
-            padding: 20px;
-            background: #fff;
-            border-radius: 5px;
-            border-left: 5px solid var(--accent-color);
-            line-height: 1.8;
-            min-height: 50px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 200px;
         }
-        .law-info { font-weight: bold; margin-bottom: 10px; color: var(--primary-color); border-bottom: 1px solid #eee; }
-        .article-caption { color: #666; font-size: 0.9rem; display: block; margin-bottom: 5px; }
-        .article-line { margin-bottom: 8px; display: block; }
-        .paragraph-num { font-weight: bold; margin-right: 0.5em; }
-        .item-row { margin-left: 1.5em; display: block; }
-        .error { color: #d63031; background: #fff5f5; padding: 15px; border-radius: 5px; }
+
+        .article-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .paragraph {
+            margin-bottom: 15px;
+        }
+
+        .paragraph-num {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .item {
+            margin-left: 2em;
+            text-indent: -1em;
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        @media (max-width: 480px) {
+            .search-box { flex-direction: column; }
+            .input-group { width: 100%; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>主要法令 条文検索</h1>
+    <h1>条文検索システム</h1>
 
-    <div class="search-area">
+    <div class="search-box">
         <div class="input-group">
-            <label>法令を選択</label>
-            <select id="lawSelect"></select>
+            <input type="number" id="artNum" placeholder="条番号 (例: 1)" min="1">
+            <span>条</span>
         </div>
         <div class="input-group">
-            <label>条文番号</label>
-            <input type="text" id="articleNum" placeholder="例: 1" value="1">
+            <span>の</span>
+            <input type="text" id="branchNum" placeholder="枝番 (例: 2)">
         </div>
-        <button onclick="fetchArticle()">条文を表示する</button>
+        <button id="searchBtn">検索</button>
     </div>
 
-    <div id="status"></div>
-    <div id="result"></div>
+    <div id="result">
+        <p style="color: #888; text-align: center;">条文番号を入力して検索してください。</p>
+    </div>
 </div>
 
 <script>
-    const LAW_LIST = [
-        { name: "日本国憲法", id: "321AC0000000067" },
-        { name: "民法", id: "129AC0000000089" },
-        { name: "借地借家法", id: "403AC0000000090" },
-        { name: "商法", id: "132AC0000000048" },
-        { name: "会社法", id: "417AC0000000086" },
-        { name: "刑法", id: "140AC0000000045" },
-        { name: "民事訴訟法", id: "408AC0000000109" },
-        { name: "民事訴訟規則", id: "408M20000001002" },
-        { name: "刑事訴訟法", id: "123AC0000000131" },
-        { name: "警察官職務執行法", id: "323AC0000000136" },
-        { name: "刑事訴訟規則", id: "323M20000001001" },
-        { name: "行政手続法", id: "405AC0000000088" },
-        { name: "行政不服審査法", id: "426AC0000000068" },
-        { name: "行政事件訴訟法", id: "337AC0000000139" },
-        { name: "国家賠償法", id: "322AC0000000125" }
-    ];
+    let lawData = null;
 
-    const select = document.getElementById('lawSelect');
-    LAW_LIST.forEach(law => {
-        const opt = document.createElement('option');
-        opt.value = law.id;
-        opt.textContent = law.name;
-        select.appendChild(opt);
-    });
-
-    function toZenkaku(str) {
-        if (!str) return "";
-        return str.replace(/[0-9]/g, s => String.fromCharCode(s.charCodeAt(0) + 0xFEE0));
+    // JSONデータの読み込み
+    async function init() {
+        try {
+            const response = await fetch('data.json');
+            if (!response.ok) throw new Error('データの読み込みに失敗しました');
+            lawData = await response.json();
+            console.log('Data loaded successfully');
+        } catch (error) {
+            document.getElementById('result').innerHTML = `<p class="error-msg">${error.message}</p>`;
+        }
     }
 
-    async function fetchArticle() {
-        const lawId = document.getElementById('lawSelect').value;
-        const lawName = document.getElementById('lawSelect').selectedOptions[0].text;
-        let articleNumInput = document.getElementById('articleNum').value.trim();
-        const statusDiv = document.getElementById('status');
+    function executeSearch() {
+        if (!lawData) return;
+
+        const art = document.getElementById('artNum').value;
+        const branch = document.getElementById('branchNum').value.trim();
         const resultDiv = document.getElementById('result');
 
-        const articleNum = articleNumInput.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-                                          .replace(/[^0-9]/g, '');
-
-        if (!articleNum) {
-            alert("条文番号を数字で入力してください。");
+        if (!art) {
+            resultDiv.innerHTML = '<p class="error-msg">条文番号を入力してください。</p>';
             return;
         }
 
-        statusDiv.innerText = "取得中...";
-        resultDiv.innerHTML = "";
+        // 検索キーの生成 (例: "1" または "1_2")
+        const key = branch ? `${art}_${branch}` : art;
+        const data = lawData[key];
 
-        try {
-            const proxy = "https://corsproxy.io/?";
-            const apiUrl = `https://elaws.e-gov.go.jp/api/1/articles;lawId=${lawId};article=${articleNum}`;
-            
-            const response = await fetch(proxy + encodeURIComponent(apiUrl));
-            if (!response.ok) throw new Error("ネットワークエラーが発生しました。");
-            
-            const xmlText = await response.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(xmlText, "text/xml");
-
-            const articleNode = xml.querySelector('Article');
-            if (!articleNode) {
-                throw new Error(`「${lawName}」に第 ${articleNum} 条は見つかりませんでした。`);
-            }
-
-            // 安全にテキストを取得するためのヘルパー
-            const getT = (node, selector) => node?.querySelector(selector)?.textContent || "";
-
-            const articleCaption = getT(articleNode, 'ArticleCaption');
-            const articleTitle = getT(articleNode, 'ArticleTitle');
-
-            let html = `<div class="law-info">${lawName} 第${articleNum}条</div>`;
-            if (articleCaption) html += `<span class="article-caption">${articleCaption}</span>`;
-
-            const paragraphs = articleNode.querySelectorAll('Paragraph');
-            paragraphs.forEach((para, index) => {
-                const pNumText = getT(para, 'ParagraphNum');
-                const pSentences = para.querySelectorAll('ParagraphSentence > Sentence');
-                let pText = Array.from(pSentences).map(s => s.textContent).join('');
-
-                if (index === 0) {
-                    // 第1項
-                    const title = articleTitle || `第${articleNum}条`;
-                    html += `<div class="article-line"><span class="paragraph-num">${title}</span>${pText}</div>`;
-                } else {
-                    // 第2項以降
-                    const displayNum = toZenkaku(pNumText) || toZenkaku((index + 1).toString());
-                    html += `<div class="article-line"><span class="paragraph-num">${displayNum}</span>${pText}</div>`;
-                }
-
-                // 号(Item)の処理
-                const items = para.querySelectorAll('Item');
-                items.forEach(item => {
-                    const iTitle = getT(item, 'ItemTitle');
-                    const iSentences = item.querySelectorAll('ItemSentence > Sentence');
-                    const iText = Array.from(iSentences).map(s => s.textContent).join('');
-                    html += `<div class="item-row">${iTitle}　${iText}</div>`;
-                });
-            });
-
-            resultDiv.innerHTML = html;
-            statusDiv.innerText = "";
-
-        } catch (error) {
-            console.error(error);
-            statusDiv.innerText = "";
-            resultDiv.innerHTML = `<div class="error">【エラー】<br>${error.message}</div>`;
+        if (data) {
+            renderResult(art, branch, data);
+        } else {
+            resultDiv.innerHTML = '<p class="error-msg">該当する条文が見つかりません。</p>';
         }
     }
+
+    function renderResult(art, branch, data) {
+        const resultDiv = document.getElementById('result');
+        let html = `<div class="article-title">第${art}条${branch ? 'の' + branch : ''} ${data.title}</div>`;
+
+        data.paragraphs.forEach((p, index) => {
+            html += `<div class="paragraph">`;
+            // 項番号の表示（2項以上ある場合、または明示的に1項を表示したい場合）
+            if (data.paragraphs.length > 1 || index > 0) {
+                html += `<span class="paragraph-num">${index + 1}</span>`;
+            }
+            html += `${p.text}</div>`;
+
+            // 号の表示
+            if (p.items && p.items.length > 0) {
+                p.items.forEach(item => {
+                    html += `<div class="item">${item.label}　${item.text}</div>`;
+                });
+            }
+        });
+
+        resultDiv.innerHTML = html;
+    }
+
+    // イベントリスナー
+    document.getElementById('searchBtn').addEventListener('click', executeSearch);
+
+    // Enterキーで検索
+    [document.getElementById('artNum'), document.getElementById('branchNum')].forEach(el => {
+        el.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') executeSearch();
+        });
+    });
+
+    // 初期化実行
+    init();
 </script>
 
 </body>
