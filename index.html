@@ -3,39 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>法令条文検索 | Law Viewer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@300;500&display=swap" rel="stylesheet">
+    <title>法令条文検索 Lite</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
         <header>
             <h1>法令条文検索</h1>
-            <div class="search-box">
+            <div class="search-container">
                 <select id="law-select">
-                    <option value="minpo">民法</option>
-                    <option value="kenpo">憲法</option>
-                    <option value="keihou">刑法</option>
+                    <option value="constitution">日本国憲法</option>
+                    <option value="civil_code">民法</option>
                 </select>
-                <input type="text" id="article-input" placeholder="条文番号 (例: 709)">
-                <button id="search-btn">表示</button>
+                <input type="text" id="article-num" placeholder="条文番号を入力 (例: 10, 1_2)">
+                <button id="search-btn">検索</button>
             </div>
         </header>
 
-        <main id="content">
-            <div id="skeleton" class="hidden">
-                <div class="skeleton-line title"></div>
-                <div class="skeleton-line body"></div>
-                <div class="skeleton-line body"></div>
-            </div>
-            <article id="result">
-                <p class="placeholder">条文番号を入力して検索してください</p>
-            </article>
+        <main id="result-area">
+            <div class="placeholder">条文番号を入力して検索してください。</div>
         </main>
     </div>
-    <script src="https://unpkg.com/idb@7.1.1/build/umd-with-async-ittr.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
