@@ -73,12 +73,10 @@
             min-height: 50px;
         }
         .law-info { font-weight: bold; margin-bottom: 10px; color: var(--primary-color); border-bottom: 1px solid #eee; }
-        
-        /* 条・項・号の表示スタイル */
+        .article-caption { color: #666; font-size: 0.9rem; display: block; margin-bottom: 5px; }
         .article-line { margin-bottom: 8px; display: block; }
         .paragraph-num { font-weight: bold; margin-right: 0.5em; }
-        .item-row { margin-left: 1.5em; display: block; } /* 号はインデントする */
-        
+        .item-row { margin-left: 1.5em; display: block; }
         .error { color: #d63031; background: #fff5f5; padding: 15px; border-radius: 5px; }
     </style>
 </head>
@@ -94,7 +92,7 @@
         </div>
         <div class="input-group">
             <label>条文番号</label>
-            <input type="text" id="articleNum" placeholder="例: 1 (または第1条)" value="1">
+            <input type="text" id="articleNum" placeholder="例: 1" value="1">
         </div>
         <button onclick="fetchArticle()">条文を表示する</button>
     </div>
@@ -130,20 +128,20 @@
         select.appendChild(opt);
     });
 
-    // 半角数字を全角数字に変換する関数（項番号「２」などの表示用）
     function toZenkaku(str) {
+        if (!str) return "";
         return str.replace(/[0-9]/g, s => String.fromCharCode(s.charCodeAt(0) + 0xFEE0));
     }
 
     async function fetchArticle() {
         const lawId = document.getElementById('lawSelect').value;
         const lawName = document.getElementById('lawSelect').selectedOptions[0].text;
-        let articleNum = document.getElementById('articleNum').value.trim();
+        let articleNumInput = document.getElementById('articleNum').value.trim();
         const statusDiv = document.getElementById('status');
         const resultDiv = document.getElementById('result');
 
-        articleNum = articleNum.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-                               .replace(/[^0-9]/g, '');
+        const articleNum = articleNumInput.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                                          .replace(/[^0-9]/g, '');
 
         if (!articleNum) {
             alert("条文番号を数字で入力してください。");
@@ -164,39 +162,40 @@
             const parser = new DOMParser();
             const xml = parser.parseFromString(xmlText, "text/xml");
 
-            // 条(Article)ノードを取得
             const articleNode = xml.querySelector('Article');
             if (!articleNode) {
                 throw new Error(`「${lawName}」に第 ${articleNum} 条は見つかりませんでした。`);
             }
 
-            const articleTitle = articleNode.querySelector('ArticleTitle').textContent;
-            let html = `<div class="law-info">${lawName} 第${articleNum}条</div>`;
+            // 安全にテキストを取得するためのヘルパー
+            const getT = (node, selector) => node?.querySelector(selector)?.textContent || "";
 
-            // 項(Paragraph)を順番に処理
+            const articleCaption = getT(articleNode, 'ArticleCaption');
+            const articleTitle = getT(articleNode, 'ArticleTitle');
+
+            let html = `<div class="law-info">${lawName} 第${articleNum}条</div>`;
+            if (articleCaption) html += `<span class="article-caption">${articleCaption}</span>`;
+
             const paragraphs = articleNode.querySelectorAll('Paragraph');
             paragraphs.forEach((para, index) => {
-                // 項番号の取得
-                const pNumNode = para.querySelector('ParagraphNum');
-                let pNumText = pNumNode ? pNumNode.textContent : "";
-                
-                // 本文(ParagraphSentence)の取得
+                const pNumText = getT(para, 'ParagraphNum');
                 const pSentences = para.querySelectorAll('ParagraphSentence > Sentence');
                 let pText = Array.from(pSentences).map(s => s.textContent).join('');
 
                 if (index === 0) {
-                    // 第1項：条番号(第一条) + 本文
-                    html += `<div class="article-line"><span class="paragraph-num">${articleTitle}</span>${pText}</div>`;
+                    // 第1項
+                    const title = articleTitle || `第${articleNum}条`;
+                    html += `<div class="article-line"><span class="paragraph-num">${title}</span>${pText}</div>`;
                 } else {
-                    // 第2項以降：項番号(２など) + 本文
-                    const displayNum = toZenkaku(pNumText);
+                    // 第2項以降
+                    const displayNum = toZenkaku(pNumText) || toZenkaku((index + 1).toString());
                     html += `<div class="article-line"><span class="paragraph-num">${displayNum}</span>${pText}</div>`;
                 }
 
-                // 号(Item)がある場合は処理
+                // 号(Item)の処理
                 const items = para.querySelectorAll('Item');
                 items.forEach(item => {
-                    const iTitle = item.querySelector('ItemTitle').textContent;
+                    const iTitle = getT(item, 'ItemTitle');
                     const iSentences = item.querySelectorAll('ItemSentence > Sentence');
                     const iText = Array.from(iSentences).map(s => s.textContent).join('');
                     html += `<div class="item-row">${iTitle}　${iText}</div>`;
@@ -207,6 +206,7 @@
             statusDiv.innerText = "";
 
         } catch (error) {
+            console.error(error);
             statusDiv.innerText = "";
             resultDiv.innerHTML = `<div class="error">【エラー】<br>${error.message}</div>`;
         }
