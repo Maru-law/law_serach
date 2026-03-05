@@ -1,0 +1,108 @@
+:root {
+    --primary-color: #2c3e50;
+    --bg-color: #fcfcfc;
+    --border-color: #e0e0e0;
+    --accent-color: #3498db;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--primary-color);
+    font-family: 'Noto Sans JP', sans-serif;
+}
+
+#app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 50px;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 20px;
+}
+
+h1 {
+    font-weight: 500;
+    letter-spacing: 0.1em;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+input, select, button {
+    padding: 12px 18px;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+/* 条文表示エリア */
+#result {
+    font-family: 'Noto Serif JP', serif;
+    line-height: 2;
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.article-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #1a1a1a;
+}
+
+.article-caption {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.sentence {
+    margin-bottom: 1.2rem;
+    text-indent: 1em;
+}
+
+/* スケルトンスクリーン */
+.skeleton-line {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+.skeleton-line.title { height: 30px; width: 40%; }
+.skeleton-line.body { height: 20px; width: 100%; }
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.hidden { display: none; }
