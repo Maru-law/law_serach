@@ -3,43 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>条文検索アプリ</title>
+    <title>条文検索アプリ v2</title>
     <style>
         :root {
             --primary-color: #2c3e50;
-            --bg-color: #f8f9fa;
+            --bg-color: #f4f7f6;
             --card-bg: #ffffff;
-            --border-color: #dee2e6;
+            --border-color: #dcdde1;
         }
 
         body {
             font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
             background-color: var(--bg-color);
             color: var(--primary-color);
-            line-height: 1.6;
             margin: 0;
             padding: 20px;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
         }
 
         h1 {
             text-align: center;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
+            font-size: 1.4rem;
+            color: #34495e;
+            margin-bottom: 25px;
         }
 
-        /* 入力エリア */
         .search-box {
             display: flex;
             gap: 10px;
             background: var(--card-bg);
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             align-items: center;
         }
@@ -47,76 +46,56 @@
         .input-group {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
             flex: 1;
         }
 
-        input[type="number"], input[type="text"] {
+        input {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid var(--border-color);
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: opacity 0.2s;
         }
 
-        button:hover {
-            opacity: 0.8;
-        }
-
-        /* 結果表示エリア */
         #result {
             background: var(--card-bg);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            min-height: 200px;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            min-height: 150px;
         }
 
-        .article-title {
-            font-size: 1.25rem;
+        .article-header {
+            font-size: 1.2rem;
             font-weight: bold;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
+            border-left: 5px solid var(--primary-color);
+            padding-left: 15px;
             margin-bottom: 20px;
+            color: #2c3e50;
         }
 
-        .paragraph {
-            margin-bottom: 15px;
-        }
+        .paragraph { margin-bottom: 12px; position: relative; padding-left: 1.5em; }
+        .paragraph-num { position: absolute; left: 0; font-weight: bold; }
+        .item { margin-left: 2.5em; text-indent: -1.2em; font-size: 0.95rem; color: #555; margin-top: 5px; }
 
-        .paragraph-num {
-            font-weight: bold;
-            margin-right: 8px;
-        }
-
-        .item {
-            margin-left: 2em;
-            text-indent: -1em;
-            font-size: 0.95rem;
-            color: #444;
-        }
-
-        .error-msg {
-            color: #e74c3c;
-            text-align: center;
-            margin-top: 50px;
-        }
-
-        @media (max-width: 480px) {
-            .search-box { flex-direction: column; }
-            .input-group { width: 100%; }
-        }
+        .error-msg { color: #e74c3c; text-align: center; margin-top: 30px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -126,33 +105,30 @@
 
     <div class="search-box">
         <div class="input-group">
-            <input type="number" id="artNum" placeholder="条番号 (例: 1)" min="1">
+            <input type="number" id="artNum" placeholder="条" min="1">
             <span>条</span>
         </div>
         <div class="input-group">
             <span>の</span>
-            <input type="text" id="branchNum" placeholder="枝番 (例: 2)">
+            <input type="text" id="branchNum" placeholder="枝番 (1は省略可)">
         </div>
         <button id="searchBtn">検索</button>
     </div>
 
     <div id="result">
-        <p style="color: #888; text-align: center;">条文番号を入力して検索してください。</p>
+        <p style="color: #999; text-align: center;">条文番号を入力してください。</p>
     </div>
 </div>
 
 <script>
     let lawData = null;
 
-    // JSONデータの読み込み
     async function init() {
         try {
             const response = await fetch('data.json');
-            if (!response.ok) throw new Error('データの読み込みに失敗しました');
             lawData = await response.json();
-            console.log('Data loaded successfully');
-        } catch (error) {
-            document.getElementById('result').innerHTML = `<p class="error-msg">${error.message}</p>`;
+        } catch (e) {
+            document.getElementById('result').innerHTML = '<p class="error-msg">データのロードに失敗しました。</p>';
         }
     }
 
@@ -160,59 +136,66 @@
         if (!lawData) return;
 
         const art = document.getElementById('artNum').value;
-        const branch = document.getElementById('branchNum').value.trim();
+        const branchInput = document.getElementById('branchNum').value.trim();
         const resultDiv = document.getElementById('result');
 
-        if (!art) {
-            resultDiv.innerHTML = '<p class="error-msg">条文番号を入力してください。</p>';
-            return;
+        if (!art) return;
+
+        let targetData = null;
+        let finalKey = "";
+
+        // 検索ロジックの核：枝番が空または1の場合の正規化
+        if (!branchInput || branchInput === "1") {
+            if (lawData[art]) {
+                targetData = lawData[art];
+                finalKey = art;
+            } else if (lawData[`${art}_1`]) {
+                targetData = lawData[`${art}_1`];
+                finalKey = `${art}_1`;
+            }
+        } else {
+            // 枝番が2以上の場合
+            const key = `${art}_${branchInput}`;
+            if (lawData[key]) {
+                targetData = lawData[key];
+                finalKey = key;
+            }
         }
 
-        // 検索キーの生成 (例: "1" または "1_2")
-        const key = branch ? `${art}_${branch}` : art;
-        const data = lawData[key];
-
-        if (data) {
-            renderResult(art, branch, data);
+        if (targetData) {
+            render(targetData, finalKey);
         } else {
             resultDiv.innerHTML = '<p class="error-msg">該当する条文が見つかりません。</p>';
         }
     }
 
-    function renderResult(art, branch, data) {
-        const resultDiv = document.getElementById('result');
-        let html = `<div class="article-title">第${art}条${branch ? 'の' + branch : ''} ${data.title}</div>`;
-
-        data.paragraphs.forEach((p, index) => {
+    function render(data, key) {
+        // 表示用の条文番号ラベルを作成
+        const label = key.includes('_') ? `第${key.replace('_', '条の')}` : `第${key}条`;
+        
+        let html = `<div class="article-header">${label} ${data.title}</div>`;
+        
+        data.paragraphs.forEach((p, i) => {
             html += `<div class="paragraph">`;
-            // 項番号の表示（2項以上ある場合、または明示的に1項を表示したい場合）
-            if (data.paragraphs.length > 1 || index > 0) {
-                html += `<span class="paragraph-num">${index + 1}</span>`;
+            if (data.paragraphs.length > 1 || i > 0) {
+                html += `<span class="paragraph-num">${i + 1}</span>`;
             }
             html += `${p.text}</div>`;
 
-            // 号の表示
-            if (p.items && p.items.length > 0) {
+            if (p.items) {
                 p.items.forEach(item => {
                     html += `<div class="item">${item.label}　${item.text}</div>`;
                 });
             }
         });
-
-        resultDiv.innerHTML = html;
+        document.getElementById('result').innerHTML = html;
     }
 
-    // イベントリスナー
     document.getElementById('searchBtn').addEventListener('click', executeSearch);
-
-    // Enterキーで検索
-    [document.getElementById('artNum'), document.getElementById('branchNum')].forEach(el => {
-        el.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') executeSearch();
-        });
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('keypress', e => { if (e.key === 'Enter') executeSearch(); });
     });
 
-    // 初期化実行
     init();
 </script>
 
