@@ -3,27 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>法令条文検索 Lite</title>
-    <link rel="stylesheet" href="style.css">
+    <title>主要法令条文検索ツール</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+        .search-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label { font-size: 0.85rem; font-weight: bold; color: #555; }
+        select, input {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        button {
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        #status { text-align: center; font-size: 0.9rem; color: #666; min-height: 1.2em; }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            border-left: 5px solid var(--accent-color);
+            line-height: 1.8;
+            min-height: 50px;
+        }
+        .law-info { font-weight: bold; margin-bottom: 10px; color: var(--primary-color); border-bottom: 1px solid #eee; }
+        .article-line { margin-bottom: 8px; display: block; }
+        .error { color: #d63031; background: #fff5f5; padding: 15px; border-radius: 5px; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <header>
-            <h1>法令条文検索</h1>
-            <div class="search-container">
-                <select id="law-select">
-                    <option value="constitution">日本国憲法</option>
-                    <option value="civil_code">民法</option>
-                </select>
-                <input type="text" id="article-num" placeholder="条文番号を入力 (例: 10, 1_2)">
-                <button id="search-btn">検索</button>
-            </div>
-        </header>
 
-        <main id="result-area">
-            <div class="placeholder">条文番号を入力して検索してください。</div>
-        </main>
+<div class="container">
+    <h1>主要法令 条文検索</h1>
+
+    <div class="search-area">
+        <div class="input-group">
+            <label>法令を選択</label>
+            <select id="lawSelect"></select>
+        </div>
+        <div class="input-group">
+            <label>条文番号</label>
+            <input type="text" id="articleNum" placeholder="例: 1 (または第1条)" value="1">
+        </div>
+        <button onclick="fetchArticle()">条文を表示する</button>
     </div>
-    <script src="app.js"></script>
+
+    <div id="status"></div>
+    <div id="result"></div>
+</div>
+
+<script>
+    // 指定された15法令のLawIDマッピング
+    const LAW_LIST = [
+        { name: "日本国憲法", id: "321AC0000000067" },
+        { name: "民法", id: "129AC0000000089" },
+        { name: "借地借家法", id: "403AC0000000090" },
+        { name: "商法", id: "132AC0000000048" },
+        { name: "会社法", id: "417AC0000000086" },
+        { name: "刑法", id: "140AC0000000045" },
+        { name: "民事訴訟法", id: "408AC0000000109" },
+        { name: "民事訴訟規則", id: "408M20000001002" },
+        { name: "刑事訴訟法", id: "123AC0000000131" },
+        { name: "警察官職務執行法", id: "323AC0000000136" },
+        { name: "刑事訴訟規則", id: "323M20000001001" },
+        { name: "行政手続法", id: "405AC0000000088" },
+        { name: "行政不服審査法", id: "426AC0000000068" },
+        { name: "行政事件訴訟法", id: "337AC0000000139" },
+        { name: "国家賠償法", id: "322AC0000000125" }
+    ];
+
+    // 初期化：セレクトボックスの生成
+    const select = document.getElementById('lawSelect');
+    LAW_LIST.forEach(law => {
+        const opt = document.createElement('option');
+        opt.value = law.id;
+        opt.textContent = law.name;
+        select.appendChild(opt);
+    });
+
+    async function fetchArticle() {
+        const lawId = document.getElementById('lawSelect').value;
+        const lawName = document.getElementById('lawSelect').selectedOptions[0].text;
+        let articleNum = document.getElementById('articleNum').value.trim();
+        const statusDiv = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+
+        // 数字の全角→半角変換と「条」などの除去
+        articleNum = articleNum.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                               .replace(/[^0-9]/g, '');
+
+        if (!articleNum) {
+            alert("条文番号を数字で入力してください。");
+            return;
+        }
+
+        statusDiv.innerText = "取得中...";
+        resultDiv.innerHTML = "";
+
+        try {
+            const proxy = "https://corsproxy.io/?";
+            const apiUrl = `https://elaws.e-gov.go.jp/api/1/articles;lawId=${lawId};article=${articleNum}`;
+            
+            const response = await fetch(proxy + encodeURIComponent(apiUrl));
+            if (!response.ok) throw new Error("ネットワークエラーが発生しました。");
+            
+            const xmlText = await response.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(xmlText, "text/xml");
+
+            // 条文テキストの抽出
+            const sentences = xml.querySelectorAll('Sentence');
+            
+            if (sentences.length === 0) {
+                throw new Error(`「${lawName}」に第 ${articleNum} 条は見つかりませんでした。`);
+            }
+
+            // 結果の組み立て
+            let html = `<div class="law-info">${lawName} 第${articleNum}条</div>`;
+            sentences.forEach(s => {
+                const text = s.textContent.trim();
+                if (text) {
+                    html += `<span class="article-line">${text}</span>`;
+                }
+            });
+
+            resultDiv.innerHTML = html;
+            statusDiv.innerText = "";
+
+        } catch (error) {
+            statusDiv.innerText = "";
+            resultDiv.innerHTML = `<div class="error">【エラー】<br>${error.message}</div>`;
+        }
+    }
+</script>
+
 </body>
 </html>
